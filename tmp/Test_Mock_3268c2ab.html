@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test Mock</title>
+  <style>
+    /* Clean Classplus-style UI */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9f9f9;
+      margin: 0; padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+      padding: 20px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .timer {
+      font-weight: bold;
+      font-size: 1.2em;
+      color: #ff5722;
+    }
+    nav {
+      margin-bottom: 15px;
+      overflow-x: auto;
+    }
+    nav button {
+      margin: 2px;
+      padding: 6px 10px;
+      border: none;
+      background: #eee;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    nav button.active {
+      background: #ff5722;
+      color: white;
+    }
+    section.question {
+      margin-bottom: 20px;
+    }
+    section.question h2 {
+      font-size: 1.1em;
+      margin-bottom: 10px;
+    }
+    .options label {
+      display: block;
+      margin: 6px 0;
+      cursor: pointer;
+    }
+    .options input[type="radio"] {
+      margin-right: 8px;
+    }
+    .explanation {
+      margin-top: 10px;
+      background: #e8f5e9;
+      border-left: 4px solid #4caf50;
+      padding: 8px;
+      display: none;
+    }
+    .explanation.visible {
+      display: block;
+    }
+    .submit-btn {
+      background: #ff5722;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 1em;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .analysis {
+      background: #e3f2fd;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 20px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Test Mock</h1>
+      <div class="timer" id="timer">Time: 00:00</div>
+    </header>
+
+    <nav id="nav-panel">
+      
+      <button data-qid="0">1</button>
+      
+    </nav>
+
+    <section class="question" id="question-container">
+      <!-- Question content injected by JS -->
+    </section>
+
+    <button class="submit-btn" id="submit-btn">Submit</button>
+
+    <div class="analysis" id="analysis-panel">
+      <h2>Mock Analysis</h2>
+      <p>Score: <span id="score"></span> / 1</p>
+      <p>Percentage: <span id="percentage"></span>%</p>
+      <p>Correct Answers: <span id="correct-count"></span></p>
+      <p>Wrong Answers: <span id="wrong-count"></span></p>
+      <p>Time Taken: <span id="time-taken"></span></p>
+    </div>
+  </div>
+
+  <script>
+    const mock = {"name": "Test Mock", "duration_seconds": 120, "questions": [{"question_text": "2+2?", "options": ["3", "4", "5", "6"], "correct_option_index": 1, "explanation": "2+2=4"}]};
+    const totalTime = mock.duration_seconds || 600; // Default 10 min
+    let timeLeft = totalTime;
+    let timerInterval;
+
+    const navPanel = document.getElementById("nav-panel");
+    const questionContainer = document.getElementById("question-container");
+    const submitBtn = document.getElementById("submit-btn");
+    const timerDisplay = document.getElementById("timer");
+    const analysisPanel = document.getElementById("analysis-panel");
+
+    let currentQuestionIndex = 0;
+    const userAnswers = new Array(mock.questions.length).fill(null);
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+      const s = (seconds % 60).toString().padStart(2, "0");
+      return `${m}:${s}`;
+    }
+
+    function startTimer() {
+      timerDisplay.textContent = "Time: " + formatTime(timeLeft);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = "Time: " + formatTime(timeLeft);
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          submitMock();
+        }
+      }, 1000);
+    }
+
+    function renderQuestion(index) {
+      currentQuestionIndex = index;
+      const q = mock.questions[index];
+      // Highlight nav button
+      [...navPanel.children].forEach((btn, i) => {
+        btn.classList.toggle("active", i === index);
+      });
+
+      // Question HTML
+      let html = `<h2>Q${index + 1}. ${q.question_text}</h2>`;
+      if (q.image_url) {
+        html += `<img src="${q.image_url}" alt="Question Image" style="max-width: 100%; margin-bottom: 10px;">`;
+      }
+      html += `<div class="options">`;
+      q.options.forEach((opt, i) => {
+        const checked = userAnswers[index] === i ? "checked" : "";
+        html += `
+          <label>
+            <input type="radio" name="option" value="${i}" ${checked} />
+            ${opt}
+          </label>`;
+      });
+      html += `</div>`;
+
+      if (q.explanation) {
+        html += `<div class="explanation" id="explanation">${q.explanation}</div>`;
+      }
+
+      questionContainer.innerHTML = html;
+
+      // Add event listeners to options
+      const optionInputs = questionContainer.querySelectorAll("input[name='option']");
+      optionInputs.forEach(input => {
+        input.addEventListener("change", (e) => {
+          userAnswers[currentQuestionIndex] = parseInt(e.target.value);
+        });
+      });
+    }
+
+    navPanel.addEventListener("click", (e) => {
+      if (e.target.tagName === "BUTTON") {
+        const idx = parseInt(e.target.getAttribute("data-qid"));
+        renderQuestion(idx);
+      }
+    });
+
+    function submitMock() {
+      clearInterval(timerInterval);
+      submitBtn.disabled = true;
+      navPanel.querySelectorAll("button").forEach(btn => btn.disabled = true);
+
+      // Calculate score and analysis
+      let correct = 0;
+      let wrong = 0;
+      mock.questions.forEach((q, i) => {
+        if (userAnswers[i] === q.correct_option_index) {
+          correct++;
+        } else {
+          wrong++;
+        }
+      });
+
+      const percentage = ((correct / mock.questions.length) * 100).toFixed(2);
+      const timeTaken = totalTime - timeLeft;
+
+      // Show analysis panel
+      analysisPanel.style.display = "block";
+      document.getElementById("score").textContent = correct;
+      document.getElementById("percentage").textContent = percentage;
+      document.getElementById("correct-count").textContent = correct;
+      document.getElementById("wrong-count").textContent = wrong;
+      document.getElementById("time-taken").textContent = formatTime(timeTaken);
+    }
+
+    submitBtn.addEventListener("click", () => {
+      if (confirm("Are you sure you want to submit the mock?")) {
+        submitMock();
+      }
+    });
+
+    // Initial render
+    renderQuestion(0);
+    startTimer();
+  </script>
+</body>
+</html>

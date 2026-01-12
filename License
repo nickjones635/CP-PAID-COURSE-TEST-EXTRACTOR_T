@@ -1,0 +1,17 @@
+
+---
+
+## 3. `config.py`
+
+```python
+import os
+
+API_ID = int(os.getenv("API_ID", "123456"))
+API_HASH = os.getenv("API_HASH", "your_api_hash")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "your_bot_token")
+
+# Example base URL for Classplus API (replace with actual)
+CLASSPLUS_API_BASE = "https://api.classplusapp.com"
+
+# Temporary folder for storing generated HTML files
+TMP_DIR = "tmp"
