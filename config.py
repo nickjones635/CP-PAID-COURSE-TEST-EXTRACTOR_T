@@ -14,9 +14,9 @@ def must_get(name: str) -> str:
 # -----------------------
 # Telegram (REQUIRED)
 # -----------------------
-API_ID = int(must_get("27400172"))
-API_HASH = must_get("56d0a75c5f9a9de6beb5452aa63c2d36")
-BOT_TOKEN = must_get("8806359824:AAFDIKyp7V2FpzkQgP2w8k_bK5l12yVJ9ws")
+API_ID = int(must_get("API_ID"))
+API_HASH = must_get("API_HASH")
+BOT_TOKEN = must_get("BOT_TOKEN")
 
 
 # -----------------------
