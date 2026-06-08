@@ -27,9 +27,9 @@ def _get_required(name: str) -> str:
 
 
 # Telegram / Pyrogram
-API_ID: int = int(os.getenv("API_ID", "0") or "0")
-API_HASH: str = os.getenv("API_HASH", "")
-BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
+API_ID: int = int(os.getenv("API_ID", "27400172") or "0")
+API_HASH: str = os.getenv("API_HASH", "56d0a75c5f9a9de6beb5452aa63c2d36")
+BOT_TOKEN: str = os.getenv("BOT_TOKEN", "8806359824:AAFDIKyp7V2FpzkQgP2w8k_bK5l12yVJ9ws")
 
 # If you prefer to hard-fail when running the bot without credentials,
 # validate in main.py at startup.
