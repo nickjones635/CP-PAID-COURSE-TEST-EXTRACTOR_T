@@ -67,8 +67,12 @@ async def cpmock_handler(client: Client, message: Message):
     )
 
 
-@ app.on_message(filters.private & ~filters.command)
-async def message_handler(client: Client, message: Message):
+@app.on_message(filters.private)
+    if not message.text:
+        return
+
+    if message.text.startswith("/"):
+        return
     user_id = message.from_user.id
     text = message.text.strip()
     session = user_sessions.get(user_id)
