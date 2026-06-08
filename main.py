@@ -68,6 +68,8 @@ async def cpmock_handler(client: Client, message: Message):
 
 
 @app.on_message(filters.private)
+async def message_handler(client: Client, message: Message):
+
     if not message.text:
         return
 
