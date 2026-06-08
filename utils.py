@@ -10,12 +10,14 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from config import CLASSPLUS_API_BASE, TMP_DIR
 
 
+# ----------------------------
+# TEMPLATE ENGINE
+# ----------------------------
 _BASE_DIR = Path(__file__).resolve().parent
 _TEMPLATES_DIR = _BASE_DIR / "templates"
 
 
 def _tojson(value):
-    """Jinja2 filter: JSON-serialize a Python object for safe embedding in JS."""
     return json.dumps(value, ensure_ascii=False)
 
 
@@ -25,86 +27,111 @@ env = Environment(
 )
 env.filters["tojson"] = _tojson
 
-# Simulated API endpoints (Replace with real Classplus API endpoints)
-LOGIN_ORG_CODE_URL = f"{CLASSPLUS_API_BASE}/login/orgcode"
-LOGIN_TOKEN_URL = f"{CLASSPLUS_API_BASE}/login/token"
+
+# ----------------------------
+# API ENDPOINTS (ONLY REAL ONES YOU NEED)
+# ----------------------------
+OTP_REQUEST_URL = f"{CLASSPLUS_API_BASE}/login/otp/request"
+OTP_VERIFY_URL = f"{CLASSPLUS_API_BASE}/login/otp/verify"
+
 FETCH_MOCKS_URL = f"{CLASSPLUS_API_BASE}/mocks"
 FETCH_MOCK_DETAIL_URL = f"{CLASSPLUS_API_BASE}/mock"
 
+
+# ----------------------------
+# FILE HANDLING
+# ----------------------------
 def ensure_tmp_dir():
     if not os.path.exists(TMP_DIR):
         os.makedirs(TMP_DIR)
 
 
 def _safe_filename(name: str) -> str:
-    """Make a cross-platform safe filename from a mock name."""
     name = name.strip() or "mock"
     name = re.sub(r"\s+", "_", name)
     name = re.sub(r"[^A-Za-z0-9._-]+", "_", name)
     return name[:120]
 
-async def login_with_org_code(org_code: str, username: str, password: str):
-    """
-    Simulate login with organisation code + credentials.
-    Returns auth token or raises Exception.
-    """
-    # Replace with actual API call / correct endpoint for your setup
-    async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(LOGIN_ORG_CODE_URL, json={
-            "org_code": org_code,
-            "username": username,
-            "password": password
-        })
-        if resp.status_code != 200:
-            raise Exception("Invalid organisation code or credentials")
-        data = resp.json()
-        return data.get("auth_token")
 
-async def login_with_token(token: str):
+# =========================================================
+# 🔵 OTP LOGIN FLOW (ONLY AUTH METHOD YOU NEED)
+# =========================================================
+
+async def request_otp(phone: str, org_code: str):
     """
-    Validate token (simulate).
+    Send OTP to user
     """
     async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.get(f"{LOGIN_TOKEN_URL}?token={token}")
+        resp = await client.post(OTP_REQUEST_URL, json={
+            "phone": phone,
+            "org_code": org_code
+        })
+
         if resp.status_code != 200:
-            raise Exception("Invalid authorization token")
+            raise Exception(f"OTP request failed: {resp.text}")
+
+        return True
+
+
+async def verify_otp(phone: str, otp: str, org_code: str):
+    """
+    Verify OTP and return auth token
+    """
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(OTP_VERIFY_URL, json={
+            "phone": phone,
+            "otp": otp,
+            "org_code": org_code
+        })
+
+        if resp.status_code != 200:
+            raise Exception(f"Invalid OTP: {resp.text}")
+
+        data = resp.json()
+        token = data.get("auth_token")
+
+        if not token:
+            raise Exception("No auth token received")
+
         return token
 
+
+# =========================================================
+# 🟢 CORE API FUNCTIONS (KEEP THESE)
+# =========================================================
+
 async def fetch_mock_list(auth_token: str):
-    """
-    Fetch list of mocks for the user.
-    Returns list of dicts: [{"id": "101", "name": "SSC CGL Tier 1 Mock 1"}, ...]
-    """
     async with httpx.AsyncClient(timeout=30) as client:
         headers = {"Authorization": f"Bearer {auth_token}"}
         resp = await client.get(FETCH_MOCKS_URL, headers=headers)
+
         if resp.status_code != 200:
-            raise Exception("Failed to fetch mock tests")
+            raise Exception(f"Failed to fetch mocks: {resp.text}")
+
         data = resp.json() if resp.content else {}
         return data.get("mocks", []) or []
 
+
 async def fetch_mock_details(auth_token: str, mock_id: str):
-    """
-    Fetch mock test details including questions, options, images, explanations.
-    Returns dict with mock info and questions.
-    """
     async with httpx.AsyncClient(timeout=30) as client:
         headers = {"Authorization": f"Bearer {auth_token}"}
         resp = await client.get(f"{FETCH_MOCK_DETAIL_URL}/{mock_id}", headers=headers)
+
         if resp.status_code != 200:
-            raise Exception("Invalid mock ID or failed to fetch mock details")
+            raise Exception(f"Mock fetch failed: {resp.text}")
+
         return resp.json()
 
+
+# =========================================================
+# 🟡 HTML GENERATION (KEEP)
+# =========================================================
+
 def generate_mock_html(mock_data: dict):
-    """
-    Render mock HTML using Jinja2 template.
-    Returns path to generated HTML file.
-    """
     ensure_tmp_dir()
+
     template = env.get_template("mock_template.html")
-    if not isinstance(mock_data, dict):
-        raise ValueError("mock_data must be a dict")
-    # Defensive defaults expected by the template
+
     mock_data = {
         "name": mock_data.get("name", "Mock"),
         "duration_seconds": mock_data.get("duration_seconds", 600),
@@ -121,6 +148,11 @@ def generate_mock_html(mock_data: dict):
         f.write(html_content)
 
     return filepath
+
+
+# =========================================================
+# 🧹 CLEANUP
+# =========================================================
 
 def cleanup_file(filepath: str):
     if os.path.exists(filepath):
