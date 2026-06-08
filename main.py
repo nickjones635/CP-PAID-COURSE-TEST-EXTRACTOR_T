@@ -67,14 +67,8 @@ async def cpmock_handler(client: Client, message: Message):
     )
 
 
-@app.on_message(filters.private)
+@app.on_message(filters.private & ~filters.command(["start", "Cpmock"]))
 async def message_handler(client: Client, message: Message):
-
-    if not message.text:
-        return
-
-    if message.text.startswith("/"):
-        return
     user_id = message.from_user.id
     text = message.text.strip()
     session = user_sessions.get(user_id)
@@ -95,8 +89,7 @@ async def message_handler(client: Client, message: Message):
         session["org_code"] = text
         session["state"] = STATE_WAIT_CREDENTIALS
         await message.reply(
-    "Send your login credentials in format:\n\n<code>username password</code>",
-    parse_mode=ParseMode.HTML
+    "Send your login credentials in format:\n\nusername password"
 )
         return
 
@@ -125,10 +118,7 @@ async def message_handler(client: Client, message: Message):
         try:
             username, password = text.split(maxsplit=1)
         except ValueError:
-            await message.reply(
-    "Invalid format. Please send credentials as:\n\n<code>username password</code>",
-    parse_mode=ParseMode.HTML
-)
+            await message.reply("Invalid format. Please send credentials as:\n\n`username password`", parse_mode="markdown")
             return
         org_code = session.get("org_code")
         await message.reply("Logging in, please wait...", reply_markup=None)
